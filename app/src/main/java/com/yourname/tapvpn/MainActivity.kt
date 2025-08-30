@@ -20,12 +20,19 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withTimeoutOrNull
 
+import androidx.core.splashscreen.SplashScreen
+import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
+import androidx.core.view.WindowCompat
+
+
 import com.yourname.tapvpn.consent.ConsentManager
 import com.google.android.gms.ads.MobileAds
 
 import androidx.core.content.edit
 import android.widget.Toast
 import com.yourname.tapvpn.TunnelManager
+import com.yourname.tapvpn.notify.NotificationHelper
+
 
 
 private const val TAG = "TapVPN"
@@ -33,7 +40,14 @@ private const val TAG = "TapVPN"
 class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
+
+        // ✅ show splash first
+        installSplashScreen()
         super.onCreate(savedInstanceState)
+
+        // ✅ tell Android to fit windows normally
+        WindowCompat.setDecorFitsSystemWindows(window, true)
+
 
         // Android 13+ needs runtime permission for notifications
         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {

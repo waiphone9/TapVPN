@@ -1,0 +1,9 @@
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item>
+        <!-- 👇 Inset = padding around logo -->
+        <inset
+            android:drawable="@drawable/splash_logo"
+
+            android:inset="12dp" />
+    </item>
+</layer-list>
