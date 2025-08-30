@@ -2,68 +2,111 @@ package com.yourname.tapvpn
 
 import android.content.Context
 import android.util.Log
-import com.yourname.tapvpn.backend.Backend
-import com.yourname.tapvpn.backend.WgQuickBackend
-import com.yourname.tapvpn.model.Tunnel
-import com.yourname.tapvpn.model.Tunnel.State
-import com.yourname.tapvpn.util.RootShell
-import com.yourname.tapvpn.util.ToolsInstaller
+import com.wireguard.android.backend.Backend
+import com.wireguard.android.backend.Tunnel
+import com.wireguard.android.backend.Tunnel.State
 import com.wireguard.config.Config
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import java.io.BufferedReader
 import java.io.InputStreamReader
 
-object TunnelManager {
-    private var backend: Backend? = null
+private const val TAG = "TapVPN"
 
-    private fun initBackend(context: Context) {
-        if (backend == null) {
-            val shell = RootShell(context)
-            backend = WgQuickBackend(
-                context,
-                shell,
-                ToolsInstaller(context, shell)
-            )
-        }
+/**
+ * Set this to true while testing without native libs / real server.
+ * When you're ready to use the real backend, set to false and add the native libraries.
+ */
+private const val USE_FAKE_BACKEND = true
+
+object TunnelManager {
+    private var backend: Backend? = null   // unused in FAKE mode
+    private var fakeConnected: Boolean = false
+
+    // Listener for tunnel state changes (UP/DOWN) → feeds your UI
+    private var stateListener: ((Boolean) -> Unit)? = null
+
+    fun registerStateListener(listener: (Boolean) -> Unit) {
+        stateListener = listener
+        Log.d(TAG, "registerStateListener(): listener registered")
     }
 
-    // ✅ Helper to read wg0.conf from assets
+    private fun notifyStateChanged(newState: Tunnel.State) {
+        val isUp = newState == State.UP
+        Log.d(TAG, "notifyStateChanged(): $newState (isUp=$isUp)")
+        stateListener?.invoke(isUp)
+    }
+
+    // --- Helpers (used in REAL mode) ---
+
     private fun readAssetFile(context: Context, fileName: String): String {
         return context.assets.open(fileName).bufferedReader().use { it.readText() }
     }
 
-    // ✅ Connect to tunnel using .conf from assets
+    // --- Connect using .conf from assets ---
+
     fun connectFromAsset(
         context: Context,
         fileName: String,
         onSuccess: () -> Unit,
         onError: (String) -> Unit
     ) {
-        initBackend(context)
+        if (USE_FAKE_BACKEND) {
+            // ✅ FAKE: simulate a successful connect after ~0.8s
+            Log.d(TAG, "[FAKE] connectFromAsset(): simulating connect ($fileName)")
+            CoroutineScope(Dispatchers.Main).launch {
+                delay(800)
+                fakeConnected = true
+                notifyStateChanged(State.UP)
+                Log.d(TAG, "[FAKE] connectFromAsset(): connected")
+                onSuccess()
+            }
+            return
+        }
 
+        // --- REAL path (requires native libs) ---
         try {
             val configText = readAssetFile(context, fileName)
             val config = Config.parse(configText.reader().buffered())
 
-
             val tunnel = object : Tunnel {
                 override fun getName(): String = "TapVPN"
-
-                override fun onStateChange(newState: Tunnel.State) {
-                    // No-op (or log)
+                override fun onStateChange(newState: State) {
+                    Log.d(TAG, "Tunnel.onStateChange(): $newState")
+                    notifyStateChanged(newState)
                 }
             }
 
-            backend?.setState(tunnel, Tunnel.State.UP, config)
-            onSuccess()
+            // TODO: init GoBackend here when switching off FAKE mode
+            // backend = GoBackend(context.applicationContext)
+            // backend?.setState(tunnel, State.UP, config)
+
+            onSuccess() // call after real setState succeeds
         } catch (e: Exception) {
-            e.printStackTrace()
+            Log.e(TAG, "connectFromAsset(): error ❌ ${e.message}", e)
             onError(e.message ?: "Unknown error")
         }
     }
 
-    // ✅ Alternative method using reader
-    fun connectTunnel(context: Context, onSuccess: () -> Unit, onError: (String) -> Unit) {
-        initBackend(context)
+    // Alternative connect that reads "wg0.conf" via Reader
+    fun connectTunnel(
+        context: Context,
+        onSuccess: () -> Unit,
+        onError: (String) -> Unit
+    ) {
+        if (USE_FAKE_BACKEND) {
+            Log.d(TAG, "[FAKE] connectTunnel(): simulating connect (wg0.conf)")
+            CoroutineScope(Dispatchers.Main).launch {
+                delay(800)
+                fakeConnected = true
+                notifyStateChanged(State.UP)
+                Log.d(TAG, "[FAKE] connectTunnel(): connected")
+                onSuccess()
+            }
+            return
+        }
 
         try {
             val reader = BufferedReader(InputStreamReader(context.assets.open("wg0.conf")))
@@ -71,34 +114,47 @@ object TunnelManager {
 
             val tunnel = object : Tunnel {
                 override fun getName(): String = "TapVPN"
-                override fun onStateChange(newState: Tunnel.State) {
-                    // optional logging
+                override fun onStateChange(newState: State) {
+                    Log.d(TAG, "Tunnel.onStateChange(): $newState")
+                    notifyStateChanged(newState)
                 }
             }
 
-            backend?.setState(tunnel, State.UP, config)
+            // TODO: init GoBackend and setState here in REAL mode
+
             onSuccess()
         } catch (e: Exception) {
-            Log.e("TunnelManager", "❌ Failed to connect tunnel: ${e.message}", e)
+            Log.e(TAG, "connectTunnel(): error ❌ ${e.message}", e)
             onError(e.message ?: "Unknown error")
         }
     }
 
+    // Disconnect (DOWN)
     fun disconnectTunnel(context: Context) {
-        initBackend(context)
+        if (USE_FAKE_BACKEND) {
+            Log.d(TAG, "[FAKE] disconnectTunnel(): simulating disconnect")
+            CoroutineScope(Dispatchers.Main).launch {
+                delay(200)
+                fakeConnected = false
+                notifyStateChanged(State.DOWN)
+                Log.d(TAG, "[FAKE] disconnectTunnel(): disconnected")
+            }
+            return
+        }
 
         try {
+            val empty = Config.Builder().build()
             val tunnel = object : Tunnel {
                 override fun getName(): String = "TapVPN"
-                override fun onStateChange(newState: Tunnel.State) {
-                    // optional
+                override fun onStateChange(newState: State) {
+                    Log.d(TAG, "Tunnel.onStateChange(): $newState")
+                    notifyStateChanged(newState)
                 }
             }
 
-            val config = Config.Builder().build()
-            backend?.setState(tunnel, State.DOWN, config)
+            // TODO: backend?.setState(tunnel, State.DOWN, empty) in REAL mode
         } catch (e: Exception) {
-            Log.e("TunnelManager", "❌ Failed to disconnect tunnel: ${e.message}", e)
+            Log.e(TAG, "disconnectTunnel(): error ❌ ${e.message}", e)
         }
     }
 }

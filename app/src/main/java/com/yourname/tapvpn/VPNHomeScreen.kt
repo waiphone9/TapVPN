@@ -32,6 +32,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.material3.CircularProgressIndicator
+
 import kotlinx.coroutines.*
 
 import androidx.compose.material.icons.filled.Timer
@@ -48,10 +50,13 @@ fun VPNHomeScreen(
     isAdPlaying: Boolean,
     rewardedAd: RewardedAd?,
     onWatchAd: (onReward: () -> Unit) -> Unit, // updated type
-    onConnectTapped: () -> Unit,               // 👈 add this line
+    onConnectTapped: () -> Unit,               // if you added reconnect earlier
     onUpdateConnection: (Boolean) -> Unit,
     onUpdateSession: (Int) -> Unit,
-    sessionExpired: Boolean
+    onReconnect: () -> Unit,
+    sessionExpired: Boolean,
+    isConnecting: Boolean
+
 )
 
 
@@ -157,11 +162,21 @@ fun VPNHomeScreen(
                             .size(20.dp)
                     )
                     Spacer(modifier = Modifier.width(6.dp))
+
                     Text(
-                        text = if (connected) "VPN active — you’re safe!" else "You’re offline. Tap Connect to start.",
+                        text = when {
+                            isConnecting -> "Connecting to VPN..."
+                            connected -> "VPN active — you’re safe!"
+                            else -> "You’re offline. Tap Connect to start."
+                        },
                         style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold),
-                        color = if (connected) Color(0xFF6D4C41) else Color(0xFF757575)
+                        color = when {
+                            isConnecting -> Color(0xFFFFA726) // orange
+                            connected -> Color(0xFF22C55E)    // green
+                            else -> Color(0xFF757575)         // gray
+                        }
                     )
+
                     // … your updated Connect button
                     // … your updated Watch Ad button
                 }
@@ -178,23 +193,22 @@ fun VPNHomeScreen(
                         buttonPressed = true
 
                         if (!connected) {
+                            showSessionExpiredCard = false   // 👈 hide the card if it’s showing
                             onConnectTapped()
                         } else {
                             onUpdateConnection(false) // disconnect directly
                         }
-
 
                         CoroutineScope(Dispatchers.Main).launch {
                             delay(100)
                             buttonPressed = false
                         }
                     },
-
+                    enabled = !isConnecting, // disable during "Connecting…"
                     colors = ButtonDefaults.buttonColors(
                         containerColor = if (connected) Color(0xFFFF6B6B) else Color(0xFF0077B6),
                         contentColor = Color.White
                     ),
-
                     modifier = Modifier
                         .graphicsLayer {
                             scaleX = scale
@@ -205,11 +219,26 @@ fun VPNHomeScreen(
                         .width(220.dp),
                     shape = RoundedCornerShape(30.dp)
                 ) {
-                    Text(
-                        text = if (connected) "Disconnect" else "Connect",
-                        style = MaterialTheme.typography.titleMedium
-                    )
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        if (isConnecting) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(18.dp),
+                                strokeWidth = 2.dp,
+                                color = Color.White
+                            )
+                            Spacer(Modifier.width(8.dp))
+                        }
+                        Text(
+                            text = when {
+                                isConnecting -> "Connecting..."
+                                connected -> "Disconnect"
+                                else -> "Connect"
+                            },
+                            style = MaterialTheme.typography.titleMedium
+                        )
+                    }
                 }
+
 
 
 
@@ -267,19 +296,25 @@ fun VPNHomeScreen(
                                     rewardButtonPressed = true
 
                                     onWatchAd {
-                                        onUpdateSession(sessionRemainingSeconds + 30 * 60)
-                                        cooldownSeconds = 600 // ⏳ 10 minutes = 600 seconds
-
-                                        // Saved the last ad time
-
                                         val prefs = context.getSharedPreferences("tapvpn", Context.MODE_PRIVATE)
+
+                                        // Get current endTime (or now if not set)
+                                        val currentEndTime = prefs.getLong("sessionEndTime", System.currentTimeMillis())
+
+                                        // Add 30 minutes
+                                        val newEndTime = currentEndTime + (30 * 60_000)
+
+                                        // Save both endTime and cooldown timestamp
                                         prefs.edit {
-                                            putLong(
-                                                "lastExtendTime",
-                                                System.currentTimeMillis()
-                                            )
+                                            putLong("sessionEndTime", newEndTime)
+                                            putLong("lastExtendTime", System.currentTimeMillis())
                                         }
+
+                                        // Update UI state
+                                        onUpdateSession(((newEndTime - System.currentTimeMillis()) / 1000).toInt())
+                                        cooldownSeconds = 180 // ⏳ 3 minutes = 180 seconds
                                     }
+
 
                                     CoroutineScope(Dispatchers.Main).launch {
                                         delay(100)
@@ -367,7 +402,10 @@ fun VPNHomeScreen(
                             Spacer(modifier = Modifier.height(16.dp))
 
                             Button(
-                                onClick = { showSessionExpiredCard = false },
+                                onClick = {
+                                    showSessionExpiredCard = false
+                                    // onReconnect()          // 👈 trigger reconnect using existing flow
+                                },
                                 colors = ButtonDefaults.buttonColors(
                                     containerColor = Color(0xFFFFA726),
                                     contentColor = Color.White
