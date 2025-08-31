@@ -55,6 +55,8 @@ dependencies {
     implementation("androidx.compose.material:material-icons-extended")
     implementation("io.coil-kt:coil-compose:2.5.0")
     implementation ("androidx.core:core-splashscreen:1.0.1")
+    implementation ("androidx.appcompat:appcompat:1.6.1")
+
 
 
     implementation(libs.androidx.core.ktx)

@@ -8,31 +8,36 @@ import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.graphics.Bitmap
+import android.graphics.Bitmap.Config.ARGB_8888
+import android.graphics.Canvas
+import android.graphics.drawable.AdaptiveIconDrawable
+import android.graphics.drawable.BitmapDrawable
+import android.graphics.drawable.Drawable
+import android.graphics.drawable.VectorDrawable
 import android.os.Build
 import android.util.Log
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
-import com.yourname.tapvpn.R
 import com.yourname.tapvpn.MainActivity
+import com.yourname.tapvpn.R
+import android.annotation.SuppressLint
+
 
 object NotificationHelper {
     private const val TAG = "NotificationHelper"
     private const val CHANNEL_ID_ALERT = "vpn_alerts"
-    private const val NOTIF_ID_ALERT = 2001  // reuse same ID so it updates
+    private const val NOTIF_ID_ALERT = 2001
+    private const val DEFAULT_ICON_SIZE_PX = 192
 
     fun createChannel(context: Context) {
-        // High importance for alerts (sound/heads-up)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val chanAlert = NotificationChannel(
-                CHANNEL_ID_ALERT,
-                "VPN Alerts",
-                NotificationManager.IMPORTANCE_HIGH
-            ).apply {
-                description = "Alerts for session expiry or unexpected disconnect"
-            }
-            val nm = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-            nm.createNotificationChannel(chanAlert)
+            val channel = NotificationChannel(
+                CHANNEL_ID_ALERT, "VPN Alerts", NotificationManager.IMPORTANCE_HIGH
+            ).apply { description = "Alerts for session expiry or unexpected disconnect" }
+            (context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager)
+                .createNotificationChannel(channel)
         }
     }
 
@@ -44,67 +49,109 @@ object NotificationHelper {
         } else true
     }
 
-    /** Build a tappable alert that opens the app */
-    private fun buildAlert(
-        context: Context,
-        title: String,
-        text: String
-    ): Notification {
+    private fun buildAlert(context: Context, title: String, text: String): Notification {
         val intent = Intent(context, MainActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
         }
         val pending = PendingIntent.getActivity(
-            context,
-            0,
-            intent,
+            context, 0, intent,
             if (Build.VERSION.SDK_INT >= 31)
                 PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-            else
-                PendingIntent.FLAG_UPDATE_CURRENT
+            else PendingIntent.FLAG_UPDATE_CURRENT
         )
 
         return NotificationCompat.Builder(context, CHANNEL_ID_ALERT)
-            .setSmallIcon(R.drawable.ic_stat_vpn) // white-only glyph in res/drawable
+            .setSmallIcon(R.drawable.ic_stat_vpn) // your white brand glyph (24dp)
+            // If you prefer the shield instead, swap to: .setSmallIcon(R.drawable.ic_stat_vpn)
             .setContentTitle(title)
             .setContentText(text)
-            .setContentIntent(pending)
-            .setAutoCancel(true)                // dismiss when tapped
+            .setLargeIcon(loadLargeIconBitmap(context)) // uses your updated ic_launcher
+            .setStyle(NotificationCompat.BigTextStyle().bigText(text))
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setCategory(NotificationCompat.CATEGORY_ERROR)
+            .setAutoCancel(true)
+            .setContentIntent(pending)
             .build()
     }
 
+
+    @SuppressLint("MissingPermission")
     fun showSessionExpired(context: Context) {
         if (!hasPostNotificationsPermission(context)) {
             Log.w(TAG, "POST_NOTIFICATIONS not granted; skip session-expired alert")
             return
         }
-        val n = buildAlert(
-            context,
-            title = "Session ended",
-            text = "Your VPN session has expired. Tap to reconnect."
-        )
         try {
-            NotificationManagerCompat.from(context).notify(NOTIF_ID_ALERT, n)
+            NotificationManagerCompat.from(context).notify(
+                NOTIF_ID_ALERT,
+                buildAlert(
+                    context,
+                    title = "Session ended",
+                    text = "Your VPN session has expired. Tap to reconnect."
+                )
+            )
         } catch (se: SecurityException) {
             Log.e(TAG, "SecurityException showing session-expired", se)
         }
     }
 
+    @SuppressLint("MissingPermission")
     fun showUnexpectedDrop(context: Context) {
         if (!hasPostNotificationsPermission(context)) {
             Log.w(TAG, "POST_NOTIFICATIONS not granted; skip drop alert")
             return
         }
-        val n = buildAlert(
-            context,
-            title = "VPN disconnected",
-            text = "Connection dropped unexpectedly. Tap to reconnect."
-        )
         try {
-            NotificationManagerCompat.from(context).notify(NOTIF_ID_ALERT, n)
+            NotificationManagerCompat.from(context).notify(
+                NOTIF_ID_ALERT,
+                buildAlert(
+                    context,
+                    title = "VPN disconnected",
+                    text = "Connection dropped unexpectedly. Tap to reconnect."
+                )
+            )
         } catch (se: SecurityException) {
             Log.e(TAG, "SecurityException showing drop alert", se)
+        }
+    }
+
+
+    // --- Large icon from app icon (handles adaptive/vector safely) ---
+    private fun loadLargeIconBitmap(context: Context): Bitmap? {
+        val pm = context.packageManager
+        val appDrawable: Drawable? = try {
+            pm.getApplicationIcon(context.packageName)
+        } catch (_: Throwable) { null }
+
+        appDrawable?.let { drawableToBitmap(it, DEFAULT_ICON_SIZE_PX)?.let { bmp -> return bmp } }
+
+        // Fallback to mipmap/ic_launcher if PM call fails
+        val fallback = try { R.mipmap.ic_launcher } catch (_: Throwable) { 0 }
+        if (fallback != 0) {
+            ContextCompat.getDrawable(context, fallback)?.let { d ->
+                return drawableToBitmap(d, DEFAULT_ICON_SIZE_PX)
+            }
+        }
+        return null
+    }
+
+    private fun drawableToBitmap(drawable: Drawable, sizePx: Int): Bitmap? {
+        return when {
+            drawable is BitmapDrawable && drawable.bitmap != null -> drawable.bitmap
+            Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && drawable is AdaptiveIconDrawable -> {
+                val b = Bitmap.createBitmap(sizePx, sizePx, ARGB_8888)
+                val c = Canvas(b); drawable.setBounds(0, 0, c.width, c.height); drawable.draw(c); b
+            }
+            drawable is VectorDrawable -> {
+                val b = Bitmap.createBitmap(sizePx, sizePx, ARGB_8888)
+                val c = Canvas(b); drawable.setBounds(0, 0, c.width, c.height); drawable.draw(c); b
+            }
+            else -> {
+                val w = if (drawable.intrinsicWidth > 0) drawable.intrinsicWidth else sizePx
+                val h = if (drawable.intrinsicHeight > 0) drawable.intrinsicHeight else sizePx
+                val b = Bitmap.createBitmap(w, h, ARGB_8888)
+                val c = Canvas(b); drawable.setBounds(0, 0, c.width, c.height); drawable.draw(c); b
+            }
         }
     }
 }
