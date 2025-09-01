@@ -1,4 +1,4 @@
-package com.yourname.tapvpn.backend
+package com.yourname.app.backend
 
 import android.net.VpnService
 

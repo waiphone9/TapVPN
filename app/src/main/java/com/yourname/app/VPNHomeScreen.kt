@@ -1,7 +1,7 @@
 // ✅ VPNHomeScreen.kt — Polished Resurrection Build
 @file:OptIn(ExperimentalMaterial3Api::class)
 
-package com.yourname.tapvpn
+package com.yourname.app
 
 import android.content.Context
 import androidx.compose.animation.AnimatedVisibility
@@ -39,6 +39,7 @@ import kotlinx.coroutines.*
 import androidx.compose.material.icons.filled.Timer
 import androidx.compose.ui.unit.sp
 import androidx.core.content.edit
+import com.ozovpn.app.R
 
 
 @Composable
@@ -81,12 +82,12 @@ fun VPNHomeScreen(
     }
 
     val context = LocalContext.current
-    val prefs = context.getSharedPreferences("tapvpn", Context.MODE_PRIVATE)
+    val prefs = context.getSharedPreferences("OzoVPN", Context.MODE_PRIVATE)
 
     LaunchedEffect(Unit) {
         val lastTapTime = prefs.getLong("lastExtendTime", 0L)
         val elapsed = System.currentTimeMillis() - lastTapTime
-        val remaining = 600_000 - elapsed // 10 minutes in ms
+        val remaining = 180_000 - elapsed   // AFTER (3 minutes)
 
         if (remaining > 0) {
             cooldownSeconds = (remaining / 1000).toInt()
@@ -102,13 +103,13 @@ fun VPNHomeScreen(
                 title = {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Image(
-                            painter = painterResource(id = R.drawable.ic_tapvpn_logo),
+                            painter = painterResource(id = R.drawable.ic_ozovpn_logo),
                             contentDescription = "Logo",
                             modifier = Modifier.size(28.dp)
                         )
 
                         Spacer(modifier = Modifier.width(8.dp)) // Space
-                        Text("TapVPN", fontWeight = FontWeight.Bold)
+                        Text("OzoVPN", fontWeight = FontWeight.Bold)
                     }
                 },
                 actions = {
@@ -296,13 +297,13 @@ fun VPNHomeScreen(
                                     rewardButtonPressed = true
 
                                     onWatchAd {
-                                        val prefs = context.getSharedPreferences("tapvpn", Context.MODE_PRIVATE)
+                                        val prefs = context.getSharedPreferences("OzoVPN", Context.MODE_PRIVATE)
 
                                         // Get current endTime (or now if not set)
                                         val currentEndTime = prefs.getLong("sessionEndTime", System.currentTimeMillis())
 
                                         // Add 30 minutes
-                                        val newEndTime = currentEndTime + (30 * 60_000)
+                                        val newEndTime = currentEndTime + (30L * 60_000L)
 
                                         // Save both endTime and cooldown timestamp
                                         prefs.edit {
@@ -447,12 +448,12 @@ fun VPNHomeScreen(
                             }
                         },
                         title = {
-                            Text("🔒 About TapVPN", fontWeight = FontWeight.Bold)
+                            Text("🔒 About OzoVPN", fontWeight = FontWeight.Bold)
                         },
                         text = {
                             Column {
                                 Text(
-                                    text = "TapVPN helps you extend VPN sessions in a simple way. " +
+                                    text = "OzoVPN helps you extend VPN sessions in a simple way. " +
                                             "We do not collect personal data, store logs, or monitor your activity. " +
                                             "Ads are used only to extend session time.",
                                     style = MaterialTheme.typography.bodyMedium,

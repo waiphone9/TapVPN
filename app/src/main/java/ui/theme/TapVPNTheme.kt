@@ -1,4 +1,4 @@
-package com.yourname.tapvpn.ui.theme
+package com.yourname.app.ui.theme
 
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable

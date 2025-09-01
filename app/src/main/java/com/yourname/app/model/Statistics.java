@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-package com.yourname.tapvpn.model;
+package com.yourname.app.model;
 
 import android.os.SystemClock;
 
@@ -12,7 +12,6 @@ import com.wireguard.crypto.Key;
 
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Objects;
 
 import androidx.annotation.Nullable;
 

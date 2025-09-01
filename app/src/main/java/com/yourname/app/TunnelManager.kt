@@ -1,4 +1,4 @@
-package com.yourname.tapvpn
+package com.yourname.app
 
 import android.content.Context
 import android.util.Log

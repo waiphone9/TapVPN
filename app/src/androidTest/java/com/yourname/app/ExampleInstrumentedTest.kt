@@ -1,4 +1,4 @@
-package com.yourname.tapvpn
+package com.yourname.app
 
 import androidx.test.platform.app.InstrumentationRegistry
 import androidx.test.ext.junit.runners.AndroidJUnit4

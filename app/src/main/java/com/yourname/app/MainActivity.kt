@@ -1,4 +1,4 @@
-package com.yourname.tapvpn
+package com.yourname.app
 
 import android.content.Context
 import android.os.Bundle
@@ -13,27 +13,23 @@ import com.google.android.gms.ads.rewarded.RewardedAdLoadCallback
 import com.google.android.gms.ads.interstitial.InterstitialAdLoadCallback
 import com.google.android.gms.ads.FullScreenContentCallback
 import com.google.android.gms.ads.AdError
-import com.yourname.tapvpn.ui.theme.TapVPNTheme
+import com.yourname.app.ui.theme.TapVPNTheme
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withTimeoutOrNull
 
-import androidx.core.splashscreen.SplashScreen
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.core.view.WindowCompat
 
 
-import com.yourname.tapvpn.consent.ConsentManager
+import com.yourname.app.consent.ConsentManager
 import com.google.android.gms.ads.MobileAds
 
 import androidx.core.content.edit
 import android.widget.Toast
-import com.yourname.tapvpn.TunnelManager
-import com.yourname.tapvpn.notify.NotificationHelper
-
-
+import com.ozovpn.app.notify.NotificationHelper
 
 private const val TAG = "TapVPN"
 
@@ -63,7 +59,7 @@ class MainActivity : ComponentActivity() {
         NotificationHelper.createChannel(this)
 
         MobileAds.initialize(this)
-        val prefs = getSharedPreferences("tapvpn", MODE_PRIVATE)
+        val prefs = getSharedPreferences("OzoVPN", MODE_PRIVATE)
 
         // ✅ Request consent before initializing ads
         ConsentManager.requestConsent(this) { canRequestAds ->

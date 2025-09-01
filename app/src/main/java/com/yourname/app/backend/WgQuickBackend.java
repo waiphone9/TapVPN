@@ -3,19 +3,19 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-package com.yourname.tapvpn.backend;
+package com.yourname.app.backend;
 
 import android.content.Context;
 import android.util.Log;
 import android.util.Pair;
-import com.yourname.tapvpn.backend.BackendException.Reason;
-import com.yourname.tapvpn.model.Tunnel.State;
-import com.yourname.tapvpn.util.RootShell;
-import com.yourname.tapvpn.util.ToolsInstaller;
+import com.yourname.app.backend.BackendException.Reason;
+import com.yourname.app.model.Tunnel.State;
+import com.yourname.app.util.RootShell;
+import com.yourname.app.util.ToolsInstaller;
 import com.wireguard.config.Config;
 import com.wireguard.crypto.Key;
-import com.yourname.tapvpn.model.Statistics;
-import com.yourname.tapvpn.model.Tunnel;
+import com.yourname.app.model.Statistics;
+import com.yourname.app.model.Tunnel;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.nio.charset.StandardCharsets;

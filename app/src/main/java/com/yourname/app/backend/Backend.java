@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-package com.yourname.tapvpn.backend;
+package com.yourname.app.backend;
 
 
 import com.wireguard.config.Config;
@@ -12,8 +12,8 @@ import java.util.Set;
 
 import androidx.annotation.Nullable;
 
-import com.yourname.tapvpn.model.Tunnel;
-import com.yourname.tapvpn.model.Statistics;
+import com.yourname.app.model.Tunnel;
+import com.yourname.app.model.Statistics;
 
 
 /**

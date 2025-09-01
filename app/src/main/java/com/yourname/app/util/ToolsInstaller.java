@@ -3,15 +3,14 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-package com.yourname.tapvpn.util;
+package com.yourname.app.util;
 
 
 import android.content.Context;
 import android.system.OsConstants;
 import android.util.Log;
 
-import com.yourname.tapvpn.util.RootShell.RootShellException;
-import com.yourname.tapvpn.util.SharedLibraryLoader;
+import com.yourname.app.util.RootShell.RootShellException;
 
 import java.io.File;
 import java.io.FileNotFoundException;

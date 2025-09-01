@@ -3,12 +3,12 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-package com.yourname.tapvpn.model;
+package com.yourname.app.model;
 
 // import com.wireguard.util.NonNullForAll;
 
 import java.util.regex.Pattern;
-import com.wireguard.config.Config;
+
 /**
  * Represents a WireGuard tunnel.
  */

@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-package com.yourname.tapvpn.util;
+package com.yourname.app.util;
 
 
 import android.content.Context;

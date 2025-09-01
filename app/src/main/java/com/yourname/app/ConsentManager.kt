@@ -1,4 +1,4 @@
-package com.yourname.tapvpn.consent
+package com.yourname.app.consent
 
 import android.app.Activity
 import android.content.Context

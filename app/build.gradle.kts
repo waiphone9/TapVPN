@@ -5,11 +5,11 @@ plugins {
 }
 
 android {
-    namespace = "com.yourname.tapvpn"
+    namespace = "com.ozovpn.app"
     compileSdk = 35
 
     defaultConfig {
-        applicationId = "com.yourname.tapvpn"
+        applicationId = "com.ozovpn.app"
         minSdk = 21
         targetSdk = 35
         versionCode = 1
